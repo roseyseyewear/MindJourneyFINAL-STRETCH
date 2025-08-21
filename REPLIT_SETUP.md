@@ -8,7 +8,12 @@
    - Select "Import from GitHub"
    - Enter: `https://github.com/roseyseyewear/MindJourneyFINAL-STRETCH`
 
-2. **Environment Variables:**
+2. **If Nix Build Fails:**
+   - Delete `.replit` and `replit.nix` files
+   - Rename `.replit-simple` to `.replit`
+   - This uses a simpler configuration without nix dependencies
+
+3. **Environment Variables:**
    Add these in the Secrets tab (🔒):
    ```
    DATABASE_URL=your_neon_database_url
@@ -17,7 +22,7 @@
    SESSION_SECRET=your_random_session_secret
    ```
 
-3. **Start the Application:**
+4. **Start the Application:**
    - Click the "Run" button
    - Or run: `npm start`
 

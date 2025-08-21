@@ -1,8 +1,6 @@
 { pkgs }: {
   deps = [
-    pkgs.nodejs-18_x
-    pkgs.nodePackages.npm
-    pkgs.nodePackages.vite
-    pkgs.nodePackages.typescript
+    pkgs.nodejs_20
+    pkgs.npm-check-updates
   ];
 }
