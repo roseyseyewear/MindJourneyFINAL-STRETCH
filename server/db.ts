@@ -2,7 +2,7 @@ import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
-import { db as mockDb } from './db-mock.js';
+import { DatabaseStorage } from './storage';
 
 neonConfig.webSocketConstructor = ws;
 
@@ -15,7 +15,13 @@ if (process.env.DATABASE_URL) {
 } else {
   console.warn("⚠️  DATABASE_URL not set. Using mock database for development.");
   console.warn("💡 Set DATABASE_URL in Replit Secrets to use real database.");
-  db = mockDb;
+  
+  // Create a simplified mock db that works with storage patterns
+  const mockDb = require('./db-mock.ts');
+  db = mockDb.db;
 }
+
+// Export storage instance
+export const storage = new DatabaseStorage(db);
 
 export { db, pool };

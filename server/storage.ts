@@ -16,7 +16,7 @@ import {
   type InsertActivityTracking,
   type Question
 } from "@shared/schema";
-import { db } from "./db";
+// db will be injected to avoid circular imports
 import { eq, and, desc, sql } from "drizzle-orm";
 import { 
   users, 
@@ -28,7 +28,6 @@ import {
   activityTracking,
   visitorCounterSequence
 } from "@shared/schema";
-import { setupLabExperience } from "./lab-experience-setup";
 
 export interface IStorage {
   // User methods (mandatory for Replit Auth)
@@ -65,29 +64,21 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  constructor() {
-    // Initialize with lab experience data
-    this.initializeLabExperience();
+  private db: any;
+  
+  constructor(database: any) {
+    this.db = database;
+    // Initialize with default experiment data if needed
+    this.initializeDefaultExperiment();
   }
 
-  private async initializeLabExperience() {
+  private async initializeDefaultExperiment() {
     try {
-      // Check if we already have the lab experience
-      const existingExperiment = await db.select()
-        .from(experiments)
-        .where(eq(experiments.title, 'The Delta Final Stretch Experience'))
-        .limit(1);
-      
-      if (existingExperiment.length > 0) {
-        console.log('✅ Lab experience already exists');
-        return;
-      }
+      // Check if we already have an active experiment
+      const existingExperiment = await this.getActiveExperiment();
+      if (existingExperiment) return;
 
-      console.log('🚀 Setting up Delta Final Stretch lab experience...');
-      await setupLabExperience();
-    } catch (error) {
-      console.error('❌ Failed to initialize lab experience:', error);
-      // Fallback to creating a basic experiment
+      // Create the default experiment
       const experiment = await this.createExperiment({
         title: "The Experiment - A Study on Perception",
         description: "An immersive journey through perception and consciousness",
@@ -164,12 +155,28 @@ export class DatabaseStorage implements IStorage {
         }
       ];
 
+      for (let i = 0; i < levelConfigs.length; i++) {
+        const config = levelConfigs[i];
+        await this.createExperimentLevel({
+          experimentId: experiment.id,
+          levelNumber: i + 1,
+          videoUrl: config.videoUrl,
+          backgroundVideoUrl: config.backgroundVideoUrl,
+          completionVideoUrl: config.completionVideoUrl,
+          postSubmissionVideoUrl: config.postSubmissionVideoUrl,
+          videoThumbnail: null,
+          questions: config.questions,
+          branchingRules: [{ condition: "default", targetPath: "default" }],
+        });
+      }
+    } catch (error) {
+      console.log("Default experiment may already exist:", error);
     }
   }
 
   // User methods (mandatory for Replit Auth)
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+    const [user] = await this.db.select().from(users).where(eq(users.id, id));
     return user;
   }
 
@@ -225,7 +232,7 @@ export class DatabaseStorage implements IStorage {
 
   // Experiment methods
   async getExperiment(id: string): Promise<Experiment | undefined> {
-    const [experiment] = await db.select().from(experiments).where(eq(experiments.id, id));
+    const [experiment] = await this.db.select().from(experiments).where(eq(experiments.id, id));
     return experiment;
   }
 
@@ -256,7 +263,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getExperimentLevel(levelId: string): Promise<ExperimentLevel | undefined> {
-    const [level] = await db.select().from(experimentLevels).where(eq(experimentLevels.id, levelId));
+    const [level] = await this.db.select().from(experimentLevels).where(eq(experimentLevels.id, levelId));
     return level;
   }
 
@@ -273,7 +280,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get next visitor number from sequence (atomic operation)
       console.log('🔥 Getting next visitor number from sequence...');
-      const result = await db.execute(sql`SELECT nextval('visitor_counter_sequence') as next_value`);
+      const result = await this.db.execute(sql`SELECT nextval('visitor_counter_sequence') as next_value`);
       console.log('🔥 Sequence result:', result);
       const visitorNumber = Number(result.rows[0].next_value);
       console.log('🔥 Parsed visitor number:', visitorNumber);
@@ -331,7 +338,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSession(sessionId: string): Promise<ExperimentSession | undefined> {
-    const [session] = await db.select().from(experimentSessions).where(eq(experimentSessions.id, sessionId));
+    const [session] = await this.db.select().from(experimentSessions).where(eq(experimentSessions.id, sessionId));
     return session;
   }
 
