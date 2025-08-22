@@ -1,8 +1,7 @@
 import type { Express, Request } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { db } from "./db";
+import { storage, db } from "./db";
 import { sql, eq } from "drizzle-orm";
 import { users, experimentSessions, experimentResponses } from "@shared/schema";
 import multer from "multer";
