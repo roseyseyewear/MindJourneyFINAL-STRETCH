@@ -56,8 +56,12 @@ export default function Experiment() {
       setSessionId(session.id);
       setVisitorNumber(session.visitorNumber || null);
       console.log('🔥 Visitor number set to:', session.visitorNumber);
-      setCurrentState('welcome');
+      
+      // Start hypothesis phase and open video lightbox
+      setCurrentState('hypothesis');
+      setCurrentLabPhase('hypothesis');
       setIsVideoLightboxOpen(true);
+      
       // Load first level
       if (levels.length > 0) {
         setCurrentLevelData(levels[0]);
