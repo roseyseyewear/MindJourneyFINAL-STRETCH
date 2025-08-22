@@ -79,27 +79,48 @@ const mockLevels = [
 
 // Mock database with full method chain support
 const createMockQuery = (data) => ({
-  from: () => ({
-    where: () => ({
-      limit: () => data,
-      orderBy: () => data,
-      ...data
-    }),
-    limit: () => data,
-    orderBy: () => data,
-    ...data
-  }),
-  limit: () => data,
-  orderBy: () => data,
-  ...data
+  from: (table) => {
+    // Handle experiment queries
+    if (table === experiments) {
+      return {
+        where: (condition) => ({
+          limit: (num) => Promise.resolve([mockExperiment]),
+          orderBy: () => Promise.resolve([mockExperiment])
+        }),
+        limit: (num) => Promise.resolve([mockExperiment]),
+        orderBy: () => Promise.resolve([mockExperiment])
+      };
+    }
+    // Handle experiment levels queries  
+    if (table === experimentLevels) {
+      return {
+        where: (condition) => ({
+          orderBy: () => Promise.resolve(mockLevels),
+          limit: (num) => Promise.resolve(mockLevels)
+        }),
+        orderBy: () => Promise.resolve(mockLevels),
+        limit: (num) => Promise.resolve(mockLevels)
+      };
+    }
+    // Default fallback
+    return {
+      where: () => ({
+        limit: () => Promise.resolve([]),
+        orderBy: () => Promise.resolve([])
+      }),
+      limit: () => Promise.resolve([]),
+      orderBy: () => Promise.resolve([])
+    };
+  },
+  limit: () => Promise.resolve(data),
+  orderBy: () => Promise.resolve(data)
 });
 
+// Import schema tables for proper matching
+import { experiments, experimentLevels, experimentSessions, experimentResponses, users } from "@shared/schema";
+
 export const db = {
-  select: (fields) => {
-    // Return appropriate mock data based on what's being selected
-    if (fields && fields.toString().includes('experiment')) {
-      return createMockQuery([mockExperiment]);
-    }
+  select: (fields = {}) => {
     return createMockQuery([]);
   },
   
@@ -127,6 +148,11 @@ export const db = {
     set: (data) => ({
       where: () => ({ returning: () => [{ id: 'updated', ...data }] })
     })
+  }),
+  
+  // Mock execute method for SQL queries (visitor sequence)
+  execute: (query) => Promise.resolve({
+    rows: [{ next_value: Math.floor(Math.random() * 1000) + 1 }]
   }),
   
   // Direct table access for experiments and levels
