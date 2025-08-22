@@ -181,7 +181,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
+    const [user] = await this.db
       .insert(users)
       .values(userData)
       .onConflictDoUpdate({
@@ -196,7 +196,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAnonymousUser(): Promise<User> {
-    const [user] = await db
+    const [user] = await this.db
       .insert(users)
       .values({
         isAnonymous: true,
@@ -209,7 +209,7 @@ export class DatabaseStorage implements IStorage {
 
   // Privacy settings methods
   async getParticipationSettings(userId: string): Promise<ParticipationSetting | undefined> {
-    const [settings] = await db
+    const [settings] = await this.db
       .select()
       .from(participationSettings)
       .where(eq(participationSettings.userId, userId));
@@ -217,7 +217,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async setParticipationSettings(settings: InsertParticipationSetting): Promise<ParticipationSetting> {
-    const [result] = await db
+    const [result] = await this.db
       .insert(participationSettings)
       .values(settings)
       .onConflictDoUpdate({
@@ -237,7 +237,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveExperiment(): Promise<Experiment | undefined> {
-    const [experiment] = await db
+    const [experiment] = await this.db
       .select()
       .from(experiments)
       .where(eq(experiments.isActive, true))
@@ -246,7 +246,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createExperiment(insertExperiment: InsertExperiment): Promise<Experiment> {
-    const [experiment] = await db
+    const [experiment] = await this.db
       .insert(experiments)
       .values(insertExperiment)
       .returning();
@@ -254,7 +254,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getExperimentLevels(experimentId: string): Promise<ExperimentLevel[]> {
-    const levels = await db
+    const levels = await this.db
       .select()
       .from(experimentLevels)
       .where(eq(experimentLevels.experimentId, experimentId))
@@ -268,7 +268,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createExperimentLevel(insertLevel: InsertExperimentLevel): Promise<ExperimentLevel> {
-    const [level] = await db
+    const [level] = await this.db
       .insert(experimentLevels)
       .values(insertLevel)
       .returning();
@@ -292,7 +292,7 @@ export class DatabaseStorage implements IStorage {
         
         // Update user with visitor number if not already set
         if (user && !user.visitorNumber) {
-          await db
+          await this.db
             .update(users)
             .set({ visitorNumber, updatedAt: new Date() })
             .where(eq(users.id, insertSession.userId));
@@ -301,7 +301,7 @@ export class DatabaseStorage implements IStorage {
         // Create anonymous user with visitor number
         user = await this.createAnonymousUser();
         if (user) {
-          await db
+          await this.db
             .update(users)
             .set({ visitorNumber, updatedAt: new Date() })
             .where(eq(users.id, user.id));
@@ -312,7 +312,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Create session with visitor number
-      const [session] = await db
+      const [session] = await this.db
         .insert(experimentSessions)
         .values({
           ...insertSession,
@@ -327,7 +327,7 @@ export class DatabaseStorage implements IStorage {
       console.error('❌ Error creating session with visitor number:', error);
       
       // Fallback: create session without visitor number to not break user flow
-      const [session] = await db
+      const [session] = await this.db
         .insert(experimentSessions)
         .values(insertSession)
         .returning();
@@ -343,7 +343,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateSession(sessionId: string, updates: Partial<ExperimentSession>): Promise<ExperimentSession> {
-    const [session] = await db
+    const [session] = await this.db
       .update(experimentSessions)
       .set({ ...updates, updatedAt: new Date() })
       .where(eq(experimentSessions.id, sessionId))
@@ -369,7 +369,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Create response with visitor number
-      const [response] = await db
+      const [response] = await this.db
         .insert(experimentResponses)
         .values({
           ...insertResponse,
@@ -387,7 +387,7 @@ export class DatabaseStorage implements IStorage {
       console.error('❌ Error creating response with visitor number:', error);
       
       // Fallback: create response without visitor number
-      const [response] = await db
+      const [response] = await this.db
         .insert(experimentResponses)
         .values(insertResponse)
         .returning();
@@ -398,7 +398,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSessionResponses(sessionId: string): Promise<ExperimentResponse[]> {
-    const responses = await db
+    const responses = await this.db
       .select()
       .from(experimentResponses)
       .where(eq(experimentResponses.sessionId, sessionId))
@@ -407,7 +407,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllResponses(): Promise<ExperimentResponse[]> {
-    const responses = await db
+    const responses = await this.db
       .select()
       .from(experimentResponses)
       .orderBy(desc(experimentResponses.createdAt));
@@ -415,7 +415,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllSessions(): Promise<ExperimentSession[]> {
-    const sessions = await db
+    const sessions = await this.db
       .select()
       .from(experimentSessions)
       .orderBy(desc(experimentSessions.createdAt));
@@ -424,7 +424,7 @@ export class DatabaseStorage implements IStorage {
 
   // Activity tracking methods
   async trackActivity(activity: InsertActivityTracking): Promise<ActivityTrackingEvent> {
-    const [event] = await db
+    const [event] = await this.db
       .insert(activityTracking)
       .values(activity)
       .returning();
@@ -432,7 +432,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserActivity(userId: string): Promise<ActivityTrackingEvent[]> {
-    const activities = await db
+    const activities = await this.db
       .select()
       .from(activityTracking)
       .where(eq(activityTracking.userId, userId))
@@ -441,4 +441,4 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+// Note: storage will be exported from db.ts with proper database injection
